@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[282]:
+# In[83]:
 
 FOLDER = 'resources/'
 
@@ -41,7 +41,7 @@ st_names = stations[['station', 'name', 'esr']].drop_duplicates().set_index('sta
 print('Planning start time: %s (%d)' % (time.strftime(time_format, time.localtime(current_time)), current_time))
 
 
-# In[283]:
+# In[84]:
 
 # Мержим таблицы _plan и _info для поездов, локомотивов и бригад
 # Добавляем во все таблицы названия станций на маршруте и времена отправления/прибытия в читабельном формате
@@ -74,16 +74,16 @@ team_plan = team_plan.merge(team_info, on='team', suffixes=('', '_info'), how='l
 team_plan['team_type'] = team_plan.team.apply(lambda x: 'Реальная' if str(x)[0] == '2' else 'Фейковая')
 
 
-# In[284]:
+# In[85]:
 
 def nice_time(t):
     return time.strftime(time_format, time.localtime(t)) if t > 0 else ''
 
 
-# In[285]:
+# In[86]:
 
 REPORT_FOLDER = 'report/'
-PRINT = False
+PRINT = True
 report = ''
 
 def add_line(line, p=PRINT):    
@@ -144,139 +144,67 @@ def create_zip(filename):
         zf.close()    
 
 
-# In[286]:
+# In[94]:
 
 import sys
 if len(sys.argv) > 1:
-    filename = sys.argv[1]    
-else:
-    filename = 'resources/others/Иркутск-Сорт_(нечет_отправление)_ Период28июн 10_30-29июн 10_30(VSD).xlsx'
-    
-if ('xls' not in filename) & ('csv' not in filename):
-    filename = 'resources/others/Иркутск-Сорт_(нечет_отправление)_ Период28июн 10_30-29июн 10_30(VSD).xlsx'
-    
-print('Filename:', filename)
+    if sys.argv[1].upper() in stations.name.values:
+        st_name = sys.argv[1]
+    else: st_name = 'ИРКУТСК-СОРТИРОВОЧНЫЙ'
+else: st_name = 'ИРКУТСК-СОРТИРОВОЧНЫЙ'
+add_line('Отчет строится для поездов формированием на станции %s' % st_name)
+add_line('Время начала планирования: %s' % nice_time(current_time))
 
 
-# In[287]:
+# In[88]:
 
-add_header('Анализ файла %s' % filename, h=2, p=False)
-
-
-# In[288]:
-
-df = pd.read_excel(filename, header=2)
-df = df[['П/п', 'Номер', 'Индекс', 'Время', 'Вес']]
-df.columns = ['n', 'number', 'ind', 'time', 'weight']
-max_train_idx = df[df.n.apply(lambda x: '-' in str(x))].index.min()
-df = df.ix[:max_train_idx - 1]
-df['ind'] = df.ind.apply(lambda x: x.replace(' ', '-'))
-df['ind_part'] = df.ind.apply(lambda x: x[:-5])
-stations['esr4'] = stations.esr.apply(lambda x: (str(x))[:4])
-df['start_esr'] = df.ind.apply(lambda x: x[:4])
-df['end_esr'] = df.ind.apply(lambda x: x[-4:])
-df['start_name'] = df.start_esr.map(stations.drop_duplicates('esr4').set_index('esr4').name)
-df['end_name'] = df.end_esr.map(stations.drop_duplicates('esr4').set_index('esr4').name)
-add_header('Все поезда из ГИДа:')
-add_line(df)
+train_plan['train_type'] = train_plan.train.apply(lambda x: int(x[0]))
+train_plan.loc[train_plan.train_type == 9, 'task'] = train_plan.loc[train_plan.train_type == 9, 'train'].apply(lambda x: x[4:9])
+sf = train_plan[train_plan.train_type == 9]
+sf_start = sf.drop_duplicates('train')
+sf_irk = sf_start[sf_start.st_from_name == st_name]
+add_header('Все запланированные поезда своего формирования по направлениям:')
+add_line(sf_irk.st_to_name.value_counts())
 
 
-# ### Пробуем просто найти поезда по индексу
+# In[89]:
 
-# In[289]:
+def get_planned_trains(row):
+    return sf_irk[(sf_irk.st_to_name == row.st_next_name) & (sf_irk.time_start >= row.time_start)
+                 & (sf_irk.time_start < row.time_end)].train.count()
 
-df['train_id'] = df.ind.map(train_info.set_index('ind434').train)
-good = df[df.train_id.isnull() == False].ind.count()
-bad = df[df.train_id.isnull()].ind.count()
-total = df.ind.count()
-add_header('Поиск поездов по индексу')
-add_line('Найдено поездов по индексу: %d из %d' % (good, total))
-add_line('Не найдено поездов: %d' % bad)
-
-
-# ### Пробуем найти поезда по части индекса (без хвоста)
-
-# In[290]:
-
-train_info['ind_part'] = train_info.ind434.apply(lambda x: x[:-5])
-train_info.groupby('ind_part').train.unique()
-df['susp_trains'] = df.ind_part.map(train_info.groupby('ind_part').train.unique())
-df.train_id.fillna(df.susp_trains, inplace=True)
-good = df[df.train_id.isnull() == False].ind.count()
-bad = df[df.train_id.isnull()].ind.count()
-add_line('Найдено поездов по индексу и части индекса: %d из %d' % (good, total))
-add_line('Не найдено поездов: %d' % bad)
-add_line('Примеры найденных поездов:')
-add_line(df.head())
+#f = {'number':'sum', 'id':'unique'}
+task = pd.read_csv(FOLDER + 'task.csv', dtype={'st_from':str, 'st_to':str, 'st_next':str})
+add_info(task)
+task['duration'] = task.time_end - task.time_start
+task['st_next_name'] = task.st_next.map(st_names.name)
+cols = ['id', 'time_start', 'time_end', 'time_start_norm', 'time_end_norm', 'duration', 'st_from_name', 'st_next_name', 'number']
+a = task[task.st_from_name == st_name].sort_values(['time_start', 'st_to_name'])[cols].drop_duplicates()
+b = a.groupby(['time_start', 'time_end', 'time_start_norm', 'time_end_norm', 'st_next_name'])        .agg({'number':'sum', 'id':'unique'}).reset_index()
+b['plan_at_time'] = b.apply(lambda row: get_planned_trains(row), axis=1)
+b = b[['id', 'time_start', 'time_end', 'time_start_norm', 'time_end_norm', 'st_next_name', 'number', 'plan_at_time']]
+add_header('Задания (сгруппированные по направлениям) и кол-во поездов, запланированных в нужное время:')
+add_line(b)
 
 
-# ### Из оставшихся выбираем поезда своего формирования (они будут созданы из ССП)
+# In[90]:
 
-# In[291]:
-
-df[df.train_id.isnull()]
-irk = df[(df.train_id.isnull()) & (df.start_esr == '9300')].ind.count()
-bad = df[(df.train_id.isnull()) & (df.start_esr != '9300')].ind.count()
-add_header('Поиск поездов своего формирования (станция Иркутск)')
-add_line('Найдено поездов своего формирования: %d' % irk)
-add_line('Всего найдено поездов: %d из %d' % (total - bad, total))
-add_line('Не найдено поездов: %d' % bad)
-add_line('Примеры найденных поездов:')
-add_line(df[(df.train_id.isnull()) & (df.start_esr == '9300')].head())
+b['part_id'] = b['id'].apply(lambda x: [str(t)[7:] for t in x])
+problem_tasks = b[b.number > b.plan_at_time].iloc[0]['id']
+problem_tasks_part_id = b[b.number > b.plan_at_time].iloc[0]['part_id']
+add_header('Примеры заданий, по которым запланировано недостаточно поездов: %s' % problem_tasks)
 
 
-# ### Смотрим, какие поезда остались не найденными
+# In[91]:
 
-# In[292]:
-
-add_header('Оставшиеся поезда')
-add_line(df[(df.train_id.isnull()) & (df.start_esr != '9300')])
-
-
-# ### Убираем поезда с близких станций формирования (начинающиеся на 93)
-
-# In[293]:
-
-add_header('Без поездов с близких станций формирования:')
-not_found = df[(df.train_id.isnull()) & (df.start_esr.apply(lambda x: x[:2] != '93'))]
-add_line(not_found)
+cols = ['train', 'task', 'st_from_name', 'st_to_name', 'time_start_norm']
+add_header('Поезда по этим заданиям (отсортированы по id):')
+add_line(sf_irk[sf_irk.task.isin(problem_tasks_part_id)].sort_values('train')[cols])
 
 
-# ### Загружаем csv с отсевами, ищем непереданные в планировщик поезда там
+# In[92]:
 
-# In[294]:
-
-otsev = pd.read_csv('./resources/others/otsev_detail.csv', sep=';',
-                    dtype={'train_index':str, 'train_id':str, 'loco_id':str, 'team_id':str})
-otsev['ind434'] = otsev['train_index'].apply(lambda x: str(x)[:4] + '-' + str(x)[6:9] + '-' + str(x)[9:-2])
-otsev['time'] = otsev.time.apply(lambda x: x[:-3])
-pd.set_option('display.max_colwidth', 35)
-add_header('Проблемные поезда в логах отсевов')
-add_line(otsev[otsev.ind434.isin(not_found.ind)].sort_values('ind434').sort_values(['train_index', 'time'])    [['uns', 'train_index', 'loco_id', 'team_id', 'location_name', 'type_name', 'time']])
-
-
-# In[295]:
-
-add_header('Данные по проблемным поездам в логах отсевов (поиск по части индекса)')
-otsev['ind434_part'] = otsev.ind434.apply(lambda x: x[:-5])
-a = otsev[(otsev.ind434.isin(not_found.ind) == False) 
-             & (otsev.ind434_part.isin(not_found.ind_part))].sort_values('ind434')\
-                [['train_id', 'train_index', 'ind434', 'out', 'otsev_list']].dropna(subset=['out'])
-add_line(a)
-
-
-# ### Непереданные поезда, которых нет и в логах отсевов
-
-# In[296]:
-
-cols = ['number', 'ind', 'time', 'weight', 'start_name', 'end_name']
-add_header('Оставшиеся поезда, которых нет и в логах отсевов')
-add_line(not_found[not_found.ind_part.isin(otsev.ind434_part) == False][cols])
-
-
-# In[302]:
-
-filename = REPORT_FOLDER + 'train_GID_' + time.strftime('%Y%m%d_%H%M%S', time.localtime(time.time())) + '.html'
+filename = REPORT_FOLDER + 'task_' + time.strftime('%Y%m%d_%H%M%S', time.localtime(time.time())) + '.html'
 create_report(filename)
 create_zip(filename)
 

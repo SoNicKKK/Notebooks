@@ -404,8 +404,3 @@ cols = ['number', 'depot', 'ready_type', 'state', 'loc_name', 'oper_time_f', 'lo
 team_info['oper_time_f'] = team_info.oper_time.apply(lambda x: time.ctime(x))
 team_info[team_info.number.isin(arr)][cols].sort_values('state')
 
-
-# In[77]:
-
-team_plan[team_plan.number == 9205000533]
-
