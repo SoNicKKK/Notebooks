@@ -88,7 +88,7 @@ print('Recursions checked. Time elapsed: %.2f min' % ((time.time() - st) / 60))
 print('Recursion detected for %.4f sequences' % (df[df.recursion.isnull() == False].Id.count() / df.Id.count()))
 
 
-# In[ ]:
+# In[97]:
 
 preds = []
 longest = df.ints_len.max() + 1
@@ -185,13 +185,13 @@ print('LR time %.2f sec' % (time.time() - st))
 print('Estimated time for full test data: %.2f min' % ((time.time() - st) * int(len(df.index)) / (60 * int(len(preds)))))
 
 
-# In[89]:
+# In[102]:
 
 df.loc[:len(preds) - 1, 'preds'] = preds
 df['Last'] = df.recursion
 df.preds.fillna(df.ints_list.apply(lambda x: x[-1]), inplace=True)
 df.Last.fillna(df.preds, inplace=True)
-df['Last'] = df['Last'].apply(lambda x: int(np.round(float(x))))
+df['Last'] = df['Last'].apply(lambda x: int(np.round(float(x))) if x != np.inf else 0)
 print(df[['Id', 'Last']].head(10))
-#df[['Id', 'Last']].to_csv('submission.csv', sep=',', index=False)
+df[['Id', 'Last']].to_csv('submission.csv', sep=',', index=False)
 
