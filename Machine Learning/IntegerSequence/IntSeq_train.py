@@ -59,9 +59,9 @@ for i in ar:
 sns.despine()
 
 
-# In[277]:
+# In[280]:
 
-df1 = df.iloc[12]
+df1 = df.iloc[28059]
 df_train = pd.DataFrame()
 df_train['x'] = np.arange(df1.ints_len)
 df_train['x2'] = df_train.x ** 2
@@ -83,7 +83,7 @@ df_train = df_train[['x0', 'x', 'x2', 'x3', 'x4', 'x5', 'sqrt', 'odd', 'exp', 'l
 df_train.tail(10)
 
 
-# In[255]:
+# In[291]:
 
 ints_ser = pd.Series(list(map(int, df1.ints_list)))
 print('mean:', np.mean(ints_ser))
@@ -92,19 +92,19 @@ try:
     freqs = ints_ser.value_counts() 
     if len(freqs.index) > 2:
         freq, next_freq = freqs.iloc[0], freqs.iloc[1]
-        default_value = freqs.idxmax() if freq / next_freq >= 2 else np.mean(ints_ser)
+        default_value = freqs.idxmax() if freq / next_freq >= 2 else df1.ints_list[-2]
         print('most frequent value: %d (freq = %d)' % (freqs.idxmax(), freqs.iloc[0]))
         print(freqs.head().to_string())
     else:
-        default_value = np.mean(ints_ser)
+        default_value = df1.ints_list[-2]
 except OverflowError:
     print('overflow')
-    default_value = np.mean(ints_ser)
+    default_value = df1.ints_list[-2]
 
 print('default value = ', default_value)
 
 
-# In[244]:
+# In[292]:
 
 # Check recursion
 
@@ -137,12 +137,12 @@ def check_recursion(seq):
         return None
 
 
-# In[245]:
+# In[293]:
 
 print('Recursion:', check_recursion(list(map(int, df1.ints_list))))
 
 
-# In[246]:
+# In[294]:
 
 cols = [col for col in df_train.columns if col != 'res']
 df_train.replace(np.inf, np.nan, inplace=True)
@@ -152,7 +152,7 @@ df_train = df_train.reset_index()
 print(cols)
 
 
-# In[247]:
+# In[295]:
 
 from sklearn import linear_model
 lr = linear_model.LinearRegression()
@@ -164,7 +164,7 @@ pred = lr.predict(X_test)
 df_train['predict'] = pred
 
 
-# In[248]:
+# In[296]:
 
 from sklearn import cross_validation
 import warnings
@@ -189,7 +189,7 @@ scores = cross_validation.cross_val_score(lr_ridge, X_train, y_train, cv=kf)
 print('Cross validation score =', np.mean(scores))
 
 
-# In[249]:
+# In[297]:
 
 import seaborn as sns
 sns.set(style='whitegrid', context='talk')
@@ -208,7 +208,14 @@ res = df_train[-1:].res
 lr_p = int(np.round(float(df_train[-1:].predict.values[0])))
 lrr_p = int(np.round(float(df_train[-1:].predict_ridge.values[0])))
 plt.title('Real value = %s,\nLinReg pred = %s,LinReg Ridge pred = %s,\ndefault_value = %d'
-          % (str(df_train[-1:].res.values[0]), str(lr_p), str(lrr_p), default_value))
+          % (str(df_train[-1:].res.values[0]), str(lr_p), str(lrr_p), int(default_value)))
+
+
+# In[ ]:
+
+st = time.time()
+df['recursion'] = df.ints_list.apply(lambda x: check_recursion(list(map(int, x))))
+print('Recursions checked. Time elapsed: %.2f min' % ((time.time() - st) / 60))
 
 
 # In[257]:
@@ -218,8 +225,8 @@ from sklearn import cross_validation
 import time
 preds = []
 longest = df.ints_len.max() + 1
-cnt = 2
-#cnt = len(df.index)
+#cnt = 2
+cnt = len(df.index)
 
 df_train = pd.DataFrame()
 df_train['x'] = np.arange(longest)
@@ -239,10 +246,6 @@ alphas = [10 ** x for x in range(-4, 4)]
 #cnt = nrows * ncols
 #fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(18,18))
 #sns.set(style='whitegrid', context='notebook')
-
-st = time.time()
-#df['recursion'] = df.ints_list.apply(lambda x: check_recursion(list(map(int, x))))
-#print('Recursions checked. Time elapsed: %.2f min' % ((time.time() - st) / 60))
 
 st = time.time()
 for i in range(cnt):
