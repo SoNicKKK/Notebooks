@@ -1,7 +1,7 @@
-
+﻿
 # coding: utf-8
 
-# In[83]:
+# In[1]:
 
 FOLDER = 'resources/'
 
@@ -38,10 +38,11 @@ loco_series  = pd.read_csv(FOLDER + 'loco_series.csv')
 
 team_info.regions = team_info.regions.apply(literal_eval)
 st_names = stations[['station', 'name', 'esr']].drop_duplicates().set_index('station')
-print('Planning start time: %s (%d)' % (time.strftime(time_format, time.localtime(current_time)), current_time))
+print('Время составления отчета:', time.strftime(time_format, time.localtime()))
+print('Время запуска планировщика: %s (%d)' % (time.strftime(time_format, time.localtime(current_time)), current_time))
 
 
-# In[84]:
+# In[2]:
 
 # Мержим таблицы _plan и _info для поездов, локомотивов и бригад
 # Добавляем во все таблицы названия станций на маршруте и времена отправления/прибытия в читабельном формате
@@ -74,16 +75,16 @@ team_plan = team_plan.merge(team_info, on='team', suffixes=('', '_info'), how='l
 team_plan['team_type'] = team_plan.team.apply(lambda x: 'Реальная' if str(x)[0] == '2' else 'Фейковая')
 
 
-# In[85]:
+# In[3]:
 
 def nice_time(t):
     return time.strftime(time_format, time.localtime(t)) if t > 0 else ''
 
 
-# In[86]:
+# In[4]:
 
 REPORT_FOLDER = 'report/'
-PRINT = True
+PRINT = False
 report = ''
 
 def add_line(line, p=PRINT):    
@@ -144,7 +145,7 @@ def create_zip(filename):
         zf.close()    
 
 
-# In[94]:
+# In[5]:
 
 import sys
 if len(sys.argv) > 1:
@@ -156,7 +157,7 @@ add_line('Отчет строится для поездов формирован
 add_line('Время начала планирования: %s' % nice_time(current_time))
 
 
-# In[88]:
+# In[6]:
 
 train_plan['train_type'] = train_plan.train.apply(lambda x: int(x[0]))
 train_plan.loc[train_plan.train_type == 9, 'task'] = train_plan.loc[train_plan.train_type == 9, 'train'].apply(lambda x: x[4:9])
@@ -167,7 +168,7 @@ add_header('Все запланированные поезда своего фо
 add_line(sf_irk.st_to_name.value_counts())
 
 
-# In[89]:
+# In[7]:
 
 def get_planned_trains(row):
     return sf_irk[(sf_irk.st_to_name == row.st_next_name) & (sf_irk.time_start >= row.time_start)
@@ -187,7 +188,7 @@ add_header('Задания (сгруппированные по направле
 add_line(b)
 
 
-# In[90]:
+# In[8]:
 
 b['part_id'] = b['id'].apply(lambda x: [str(t)[7:] for t in x])
 problem_tasks = b[b.number > b.plan_at_time].iloc[0]['id']
@@ -195,16 +196,33 @@ problem_tasks_part_id = b[b.number > b.plan_at_time].iloc[0]['part_id']
 add_header('Примеры заданий, по которым запланировано недостаточно поездов: %s' % problem_tasks)
 
 
-# In[91]:
+# In[9]:
 
 cols = ['train', 'task', 'st_from_name', 'st_to_name', 'time_start_norm']
 add_header('Поезда по этим заданиям (отсортированы по id):')
 add_line(sf_irk[sf_irk.task.isin(problem_tasks_part_id)].sort_values('train')[cols])
 
 
-# In[92]:
+# In[10]:
 
 filename = REPORT_FOLDER + 'task_' + time.strftime('%Y%m%d_%H%M%S', time.localtime(time.time())) + '.html'
 create_report(filename)
 create_zip(filename)
+
+
+# In[16]:
+
+st_name = 'ИРКУТСК-СОРТИРОВОЧНЫЙ'
+loco_info['ser_name'] = loco_info.series.map(loco_series.set_index('ser_id').ser_name)
+loco_info['oper_time_f'] = loco_info.oper_time.map(nice_time)
+irk_loco = loco_info[(loco_info.loc_name == st_name) & (loco_info.ltype == 1)][['loco', 'ser_name', 'sections', 'regions', 'oper', 'oper_time_f', 'loc_name', 'tts', 'dts']]
+irk_loco.loco.count()
+
+
+# In[24]:
+
+cols = ['loco', 'st_from_name', 'st_to_name', 'time_start_norm', 'time_end_norm', 'train', 'end']
+loco_plan['end'] = ((loco_plan.loco != loco_plan.loco.shift(-1)) | (loco_plan.train != loco_plan.train.shift(-1))) & (loco_plan.train != '-1')
+loco_ends = loco_plan[loco_plan.end == True]
+loco_ends[loco_ends.st_to_name == st_name].sort_values('time_end')[cols]
 

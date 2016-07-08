@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[260]:
+# In[132]:
 
 import numpy as np
 import pandas as pd
@@ -10,7 +10,7 @@ import seaborn as sns
 get_ipython().magic('matplotlib inline')
 
 
-# In[265]:
+# In[133]:
 
 filename = 'train.csv'
 #filename = 'test.csv'
@@ -18,25 +18,25 @@ df = pd.read_csv(filename)
 df.head()
 
 
-# In[266]:
+# In[134]:
 
 df.columns = ['Id', 'ints']
 a = df.ix[0].ints.split(',')[-1]
 
 
-# In[267]:
+# In[135]:
 
 df['ints_list'] = df.ints.apply(lambda x: x.split(','))
 df['ints_len'] = df.ints_list.apply(lambda x: len(x))
 df['ints_data'] = df.ints_list.apply(lambda x: x[:-1])
 df['res'] = df.ints_list.apply(lambda x: x[-1])
-df['prev'] = df.ints_list.apply(lambda x: x[-2] if len(x) > 1 else np.nan)
+df['prev'] = df.ints_list.apply(lambda x: int(x[-2]) if len(x) > 1 else np.nan)
 df.drop('ints', axis=1, inplace=True)
 print('Longest:', df.ints_len.max())
 df.head()
 
 
-# In[268]:
+# In[136]:
 
 df.ints_len.max()
 nrows, ncols = 4, 4
@@ -59,9 +59,9 @@ for i in ar:
 sns.despine()
 
 
-# In[280]:
+# In[137]:
 
-df1 = df.iloc[28059]
+df1 = df.iloc[108357]
 df_train = pd.DataFrame()
 df_train['x'] = np.arange(df1.ints_len)
 df_train['x2'] = df_train.x ** 2
@@ -75,15 +75,33 @@ df_train['odd'] = df_train.x % 2
 df_train['log'] = np.log(df_train.x).astype(float)
 df_train['sin'] = np.sin(df_train.x)
 df_train['cos'] = np.cos(df_train.x)
-df_train['tan'] = np.tan(df_train.x)
-df_train['res'] = df1.ints_list
+df_train['res'] = list(map(int, df1.ints_list))
 df_train['prev'] = df_train.res.shift(1)
-df_train['def'] = default_value
-df_train = df_train[['x0', 'x', 'x2', 'x3', 'x4', 'x5', 'sqrt', 'odd', 'exp', 'log', 'sin', 'cos', 'tan', 'prev', 'def', 'res']]
-df_train.tail(10)
+df_train['diff'] = df_train.res - df_train.prev
+#df_train['def'] = default_value
+df_train = df_train[['x0', 'x', 'x2', 'x3', 'x4', 'x5', 'sqrt', 'odd', 'exp', 'log', 'sin', 'cos', 'prev', 'res']]
+#df_train
 
 
-# In[291]:
+# In[207]:
+
+df2 = df.head(10)
+#df2['freqs'] = df2.ints_data.apply(lambda x: pd.Series(x).value_counts().to_string())
+#df2
+for i in range(10):
+    df2 = df.ix[i]    
+    s = pd.Series(df2.ints_data)        
+    freqs = s[s < np.iinfo(np.int64).max].value_counts()
+    if len(freqs.index) > 2:
+        freq, next_freq = freqs.iloc[0], freqs.iloc[1]
+        default_value = freqs.idxmax() if freq / next_freq >= 2 else df2.ints_data[-1]
+    else:
+        default_value = df2.ints_data[-1]
+    print(df2.ints_data)
+    print(i, default_value)
+
+
+# In[8]:
 
 ints_ser = pd.Series(list(map(int, df1.ints_list)))
 print('mean:', np.mean(ints_ser))
@@ -104,7 +122,7 @@ except OverflowError:
 print('default value = ', default_value)
 
 
-# In[292]:
+# In[81]:
 
 # Check recursion
 
@@ -132,17 +150,17 @@ def check_recursion(seq):
             feat_pred_A = [1] + seq[p-n+1:]
             predict = np.dot(feat_pred_A, w)
             return int(predict)
-        else: return None        
+        else: return np.nan        
     except:
-        return None
+        return np.nan
 
 
-# In[293]:
+# In[10]:
 
-print('Recursion:', check_recursion(list(map(int, df1.ints_list))))
+print('Recursion:', check_recursion(list(map(int, df1.ints_data))))
 
 
-# In[294]:
+# In[11]:
 
 cols = [col for col in df_train.columns if col != 'res']
 df_train.replace(np.inf, np.nan, inplace=True)
@@ -152,19 +170,27 @@ df_train = df_train.reset_index()
 print(cols)
 
 
-# In[295]:
+# In[12]:
 
 from sklearn import linear_model
 lr = linear_model.LinearRegression()
-X_train = df_train[cols]
-y_train = df_train.res
+X_train = df_train[:-1][cols]
+y_train = df_train[:-1].res
 X_test = df_train[cols]
 lr.fit(X_train, y_train)
 pred = lr.predict(X_test)
 df_train['predict'] = pred
 
 
-# In[296]:
+# In[13]:
+
+print(X_train.tail(10).to_string(), '\n')
+print(X_test.tail(10).to_string(), '\n')
+print(y_train.tail(10).to_string(), '\n')
+print(pred[-1])
+
+
+# In[14]:
 
 from sklearn import cross_validation
 import warnings
@@ -189,7 +215,7 @@ scores = cross_validation.cross_val_score(lr_ridge, X_train, y_train, cv=kf)
 print('Cross validation score =', np.mean(scores))
 
 
-# In[297]:
+# In[15]:
 
 import seaborn as sns
 sns.set(style='whitegrid', context='talk')
@@ -211,21 +237,60 @@ plt.title('Real value = %s,\nLinReg pred = %s,LinReg Ridge pred = %s,\ndefault_v
           % (str(df_train[-1:].res.values[0]), str(lr_p), str(lrr_p), int(default_value)))
 
 
+# In[518]:
+
+st = time.time()
+#df['recursion'] = df.ints_data.apply(lambda x: check_recursion(list(map(int, x))))
+#print('Recursions checked. Time elapsed: %.2f min' % ((time.time() - st) / 60))
+#df[['Id', 'recursion']].to_csv('train_recursion_result.csv', encoding='utf-8-sig')
+df['recursion'] = df['Id'].map(pd.read_csv('train_recursion_result.csv', encoding='utf-8-sig').set_index('Id').recursion)
+df.head()
+
+
+# In[ ]:
+
+# check some recursions
+import time
+st = time.time()
+def get_diffs(x):
+    return [x[i+1] - x[i] for i in range(len(x) - 1)] if len(x) > 1 else x    
+
+df['ints_data'] = df.ints_data.apply(lambda x: list(map(int, x)))
+df['diffs'] = df.ints_data.apply(get_diffs)
+df['plus1'] = df.ints_data.apply(lambda x: [i+1 for i in x])
+df['minus1'] = df.ints_data.apply(lambda x: [i-1 for i in x])
+print('time: %.2f min', ((time.time() - st) / 60))
+
+
 # In[ ]:
 
 st = time.time()
-df['recursion'] = df.ints_list.apply(lambda x: check_recursion(list(map(int, x))))
-print('Recursions checked. Time elapsed: %.2f min' % ((time.time() - st) / 60))
+df['recursion'] = df['Id'].map(pd.read_csv('train_recursion_result.csv', encoding='utf-8-sig').set_index('Id').recursion)
+df['rec_diffs'] = df.apply(lambda row: check_recursion(row.diffs) + row.prev, axis=1)
+df['rec_plus1'] = df.plus1.apply(lambda x: check_recursion(x) - 1)
+df['rec_minus1'] = df.minus1.apply(lambda x: check_recursion(x) + 1)
+print('time: %.2f min', ((time.time() - st) / 60))
 
 
-# In[257]:
+# In[ ]:
+
+print(df[df.recursion.notnull()].Id.count() / sample_n)
+df.recursion.fillna(df.rec_diffs, inplace=True)
+df.recursion.fillna(df.rec_plus1, inplace=True)
+df.recursion.fillna(df.rec_minus1, inplace=True)
+print(df[df.recursion.notnull()].Id.count() / sample_n)
+df[['Id', 'recursion']].to_csv('train_full_recursion_result.csv', encoding='utf-8-sig')
+
+
+# In[533]:
 
 from sklearn import linear_model 
 from sklearn import cross_validation
 import time
 preds = []
 longest = df.ints_len.max() + 1
-#cnt = 2
+#cnt = 200
+#cnt = 10000
 cnt = len(df.index)
 
 df_train = pd.DataFrame()
@@ -242,11 +307,6 @@ df_train['sin'] = np.sin(df_train.x)
 df_train['cos'] = np.cos(df_train.x)
 
 alphas = [10 ** x for x in range(-4, 4)]
-#nrows, ncols = 4, 4
-#cnt = nrows * ncols
-#fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(18,18))
-#sns.set(style='whitegrid', context='notebook')
-
 st = time.time()
 for i in range(cnt):
     if (i % 1000 == 0) & (i != 0):
@@ -255,14 +315,14 @@ for i in range(cnt):
     #print(i)
     df1 = df.ix[i]    
     df_curr = df_train[:df1.ints_len].copy(deep=True)    
-    print(df1.ints_len, len(df_curr.index))
+    #print(df1.ints_len, len(df_curr.index))
     df_curr['res'] = df1.ints_list
     df_curr['prev'] = df_curr.res.shift(1)
     ints_ser = pd.Series(list(map(int, df1.ints_list)))
-    def_func = df1.ints_list[-1]
+    def_func = df1.ints_data[-1] if len(df1.ints_data) > 0 else 1
     #def_func = np.mean(ints_ser)
     try:
-        freqs = ints_ser.value_counts() 
+        freqs = ints_ser[ints_ser < np.iinfo(np.int64).max].value_counts() 
         if len(freqs.index) > 2:
             freq, next_freq = freqs.iloc[0], freqs.iloc[1]
             default_value = freqs.idxmax() if freq / next_freq >= 2 else def_func
@@ -277,9 +337,9 @@ for i in range(cnt):
     cols = [col for col in df_curr.columns if col != 'res']    
     df_curr = df_curr[1:].reset_index()
     
-    if not df_curr.empty:    
-        X_train = df_curr[cols]
-        y_train = df_curr.res        
+    if not df_curr[:-1].empty:
+        X_train = df_curr[:-1][cols]
+        y_train = df_curr[:-1].res        
         X_test = df_curr[cols]        
         
         lr = linear_model.LinearRegression()        
@@ -306,7 +366,12 @@ for i in range(cnt):
                 try:
                     kf = cross_validation.KFold(len(X_train.index), n_folds=5, shuffle=True)
                     scores = cross_validation.cross_val_score(lr_ridge, X_train, y_train, cv=kf)
-                    col_to_result = 'def' if np.mean(scores) < 0.95 else 'predict_ridge'
+                    col_to_result = 'def' if np.mean(scores) < 0.999 else 'predict_ridge'                    
+                    #if np.mean(scores) >= 0.999:
+                    #    if np.round(pred_ridge[-1]) == int(df1.ints_list[-1]): 
+                    #        print('SUCCESS!!!')
+                    #        print('CV score =', np.mean(scores))
+                    #        print('Predict', int(np.round(pred_ridge[-1])), ', real', df1.ints_list[-1])
                 except: col_to_result = 'predict_ridge'
             else: col_to_result = 'predict_ridge'
 
@@ -314,39 +379,44 @@ for i in range(cnt):
         preds.append(df_curr[-1:][col_to_result].values[0])
         
     else:
-        preds.append(df1.ints_list[-1])
-    
-    #plt.subplot(nrows, ncols, i + 1)
-    #plt.scatter(df_curr[:-1].x, df_curr[:-1].res, s=20, c='g', label='Train set ' + str(i))
-
-    #for j in range(5):    
-    #    plt.scatter(df_curr[-1:].x, df_curr[-1:].res, s=50+5**j, c='green', alpha=0.52-0.12*j, label='_')
-    #    plt.scatter(df_curr[-1:].x, df_curr[-1:].predict,  s=50+5**j, c='red', alpha=0.52-0.12*j, label='_')
-    #    plt.scatter(df_curr[-1:].x, df_curr[-1:].predict_ridge,  s=50+5**j, c='darkblue', alpha=0.52-0.12*j, label='_')
-
-    #plt.plot(df_curr.x, df_curr.predict, '-', c='r', lw=0.8, ms=5, label='LinReg')
-    #plt.plot(df_curr.x, df_curr.predict_ridge, '-', c='darkblue', lw=0.8, ms=5, label='LinReg Ridge')
-    #plt.legend(loc='upper left', frameon=True)    
+        preds.append(default_value)
     
 print(len(df.index), len(preds))
 print('Time %.2f sec' % (time.time() - st))
 print('Estimated time for full test data: %.2f min' % ((time.time() - st) * int(len(df.index)) / (60 * int(len(preds)))))
-df['preds'] = preds
+print(preds[:20])
 
 
-# In[161]:
+# In[539]:
+
+print(len(preds))
+if 'preds' in df.columns:
+    df.drop('preds', axis=1, inplace=True)
+
+df = df.join(pd.Series(preds, name='preds').to_frame())
+df[['Id', 'ints_data', 'recursion', 'preds']].head()
+
+
+# In[541]:
 
 df['Last'] = df.recursion
 df.Last.fillna(df.preds, inplace=True)
+df.Last.fillna(df.prev, inplace=True)
+df.Last.fillna(1, inplace=True)
+#df[df.Last.isnull()]
 df['Last'] = df['Last'].apply(lambda x: int(np.round(float(x))))
-print(df[['Id', 'Last']].head(10))
-df[['Id', 'Last']].to_csv('submission.csv', sep=',', index=False)
+df[['Id', 'ints_data', 'res', 'recursion', 'preds']].head(10)
 
 
-# In[133]:
+# In[542]:
 
 # check train
 df['res_str'] = df.res.apply(str)
 df['last_str'] = df.Last.apply(str)
 df[df.res_str == df.last_str].Id.count() / df.Id.count()
+
+
+# In[ ]:
+
+#df[['Id', 'Last']].to_csv('submission.csv', sep=',', index=False)
 

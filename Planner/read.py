@@ -1,4 +1,4 @@
-
+﻿
 # coding: utf-8
 
 # <a id='toc'></a>
@@ -44,7 +44,7 @@
 # 6. [Выгрузка результатов в csv-файлы](#save_csv)
 #   1. [Создание вспомогательного файла с названиями серий](#series)
 
-# In[34]:
+# In[159]:
 
 import sys
 if len(sys.argv) > 1:
@@ -58,27 +58,30 @@ else:
 print('Load data from file "%s"' % file_name)
 
 
-# In[35]:
+# In[160]:
 
 import pandas as pd
 import numpy as np
 import re, time
 
 
-# In[36]:
+# In[161]:
 
 start_time = time.time()
 FOLDER = 'resources/'
 
 
-# In[37]:
+# In[162]:
+
+
+
 # <a id='dict'></a>
 # ## Подготовка словарей для хранения данных [ToC](#toc)
 
 # <a id='cols'></a>
 # ### Поля сущностей [ToC](#toc)
 
-# In[38]:
+# In[163]:
 
 entities_cols = {  'link'                  :['link', 'st_from', 'st_to', 'time', 'dist', 'dir', 'lines', 'road'],
                    'station'               :['station', 'loco_region','norm_time'],
@@ -120,7 +123,7 @@ entities_cols = {  'link'                  :['link', 'st_from', 'st_to', 'time',
 # <a id='data'></a>
 # ### Словари для строк из файла, списков с данными и датафреймов [ToC](#toc)
 
-# In[39]:
+# In[164]:
 
 entities_data = {}
 for key in entities_cols.keys():
@@ -138,7 +141,7 @@ for key in entities_cols.keys():
 # <a id='read'></a>
 # ## Загрузка строк из файла [ToC](#toc)
 
-# In[40]:
+# In[165]:
 
 def simplecount(filename):
     lines = 0
@@ -149,7 +152,7 @@ def simplecount(filename):
 n = simplecount(file_name)
 
 
-# In[41]:
+# In[166]:
 
 with open(file_name, encoding = 'utf_8_sig') as f:    
     for line in f:
@@ -174,7 +177,7 @@ print(sorted((key, len(entities_data[key])) for key in entities_cols.keys()))
 # <a id='train_info'></a>
 # #### Атрибуты и маршруты поездов [ToC](#toc)
 
-# In[42]:
+# In[167]:
 
 entities_df_source['train_info'] = []
 entities_df_source['routes'] = []
@@ -203,7 +206,7 @@ for line in entities_data['train_info']:
 # <a id='train_oper'></a>
 # #### Операции с поездами (поездные факты) [ToC](#toc)
 
-# In[43]:
+# In[168]:
 
 entities_df_source['train_oper'] = []
 
@@ -231,7 +234,7 @@ for line in entities_data['train_ready']:
 # <a id='loco_attributes'></a>
 # #### Атрибуты локомотивов и тяговые плечи [ToC](#toc)
 
-# In[44]:
+# In[169]:
 
 entities_df_source['loco_attributes'] = []
 entities_df_source['loco_info_regs'] = []
@@ -260,7 +263,7 @@ for line in entities_data['loco_attributes']:
 # <a id='fact_loco'></a>
 # #### Местоположение локомотивов (локомотивные факты) [ToC](#toc)
 
-# In[45]:
+# In[170]:
 
 entities_df_source['fact_loco'] = []
 
@@ -286,7 +289,7 @@ for line in entities_data['fact_loco']:
 # <a id='fact_loco_next_service'></a>
 # #### Время и пробег до ТО-2 [ToC](#toc)
 
-# In[46]:
+# In[171]:
 
 entities_df_source['fact_loco_next_service'] = []
 
@@ -304,7 +307,7 @@ for line in entities_data['fact_loco_next_service']:
 # <a id='team_attributes'></a>
 # #### Атрибуты бригад [ToC](#toc)
 
-# In[47]:
+# In[172]:
 
 entities_df_source['team_attributes'] = []
 a = []
@@ -330,7 +333,7 @@ for line in entities_data['team_attributes']:
 # <a id='fact_team_location'></a>
 # #### Местоположение и состояние бригад [ToC](#toc)
 
-# In[48]:
+# In[173]:
 
 entities_df_source['fact_team_location'] = []
 
@@ -352,7 +355,7 @@ for line in entities_data['fact_team_location']:
 # <a id='fact_team_ready'></a>
 # #### Последние явки и время начала отдыха бригад [ToC](#toc)
 
-# In[49]:
+# In[174]:
 
 entities_df_source['fact_team_ready'] = []
 
@@ -374,7 +377,7 @@ for line in entities_data['fact_team_ready']:
 # <a id='station'></a>
 # #### Станции и пункты проведения ТО [ToC](#toc)
 
-# In[50]:
+# In[175]:
 
 entities_df_source['station'] = []
 entities_df_source['service'] = []
@@ -398,7 +401,7 @@ for line in entities_data['station']:
 # <a id='link'></a>
 # #### Участки планирования [ToC](#toc)
 
-# In[51]:
+# In[176]:
 
 entities_df_source['link'] = []
 
@@ -416,7 +419,7 @@ for line in entities_data['link']:
 # <a id='team_region'></a>
 # #### Участки обращения бригад (УОЛБ) [ToC](#toc)
 
-# In[52]:
+# In[177]:
 
 entities_df_source['team_region'] = []
 
@@ -442,7 +445,7 @@ for line in entities_data['team_region']:
 # <a id='team_work_region'></a>
 # #### Участки обкатки бригад [ToC](#toc)
 
-# In[53]:
+# In[178]:
 
 entities_df_source['team_work_region'] = []
 
@@ -461,7 +464,7 @@ for line in entities_data['team_work_region']:
 # <a id='loco_tonnage'></a>
 # #### Весовые нормы локомотивов [ToC](#toc)
 
-# In[54]:
+# In[179]:
 
 entities_df_source['loco_tonnage'] = []
 
@@ -481,7 +484,7 @@ for line in entities_data['loco_tonnage']:
 # <a id='task'></a>
 # #### Задания на поезда своего формирования из ССП [ToC](#toc)
 
-# In[55]:
+# In[180]:
 
 entities_df_source['task'] = []
 
@@ -508,7 +511,7 @@ for line in entities_data['task']:
 # <a id='slot_pass'></a>
 # #### Пассажирские нитки вариантного графика [ToC](#toc)
 
-# In[56]:
+# In[181]:
 
 entities_df_source['slot_pass'] = []
 
@@ -527,7 +530,7 @@ for line in entities_data['slot_pass']:
 # <a id='slot'></a>
 # #### Грузовые нитки вариантного графика [ToC](#toc)
 
-# In[57]:
+# In[182]:
 
 entities_df_source['slot'] = []
 
@@ -546,7 +549,7 @@ for line in entities_data['slot']:
 # <a id='service_station'></a>
 # #### Станции ПТОЛ [ToC](#toc)
 
-# In[64]:
+# In[183]:
 
 entities_df_source['service_station'] = []
 
@@ -567,7 +570,7 @@ for line in entities_data['service_station']:
 # <a id='support'></a>
 # #### Вспомогательная информация (индексы поездов, номера локомотивов, бригад, названия и коды станций [ToC](#toc)
 
-# In[65]:
+# In[184]:
 
 entities_df_source['support'] = []
 
@@ -608,7 +611,7 @@ for line in entities_data['support']:
 # <a id='current_time'></a>
 # #### Время начала планирования [ToC](#toc)
 
-# In[66]:
+# In[185]:
 
 entities_df_source['current_time'] = []
 for line in entities_data['current_time']:
@@ -624,7 +627,7 @@ for line in entities_data['current_time']:
 # <a id='slot_train'></a>
 # #### Планы по поездам [ToC](#toc)
 
-# In[67]:
+# In[186]:
 
 entities_df_source['slot_train'] = []
 
@@ -643,7 +646,7 @@ for line in entities_data['slot_train']:
 # <a id='slot_loco'></a>
 # #### Планы по локомотивам [ToC](#toc)
 
-# In[68]:
+# In[187]:
 
 entities_df_source['slot_loco'] = []
 
@@ -663,7 +666,7 @@ for line in entities_data['slot_loco']:
 # <a id='slot_team'></a>
 # #### Планы по бригадам [ToC](#toc)
 
-# In[69]:
+# In[188]:
 
 entities_df_source['slot_team'] = []
 
@@ -684,7 +687,7 @@ for line in entities_data['slot_team']:
 # <a id='create_df'></a>
 # ## Создание датафреймов [ToC](#toc)
 
-# In[70]:
+# In[189]:
 
 for key in entities_df.keys():
     try:
@@ -701,7 +704,7 @@ for key in entities_df.keys():
 # <a id='merge_station'></a>
 # #### Добавление кодов и названий станций в station [ToC](#toc)
 
-# In[71]:
+# In[190]:
 
 for col in entities_cols['station_names']:
     if col != 'station':
@@ -711,7 +714,25 @@ for col in entities_cols['station_names']:
 # <a id='merge_train'></a>
 # #### Добавление индекса и операций с поездами в train_info [ToC](#toc)
 
-# In[72]:
+# In[191]:
+
+# Если по поезду в train_oper несколько операций, то оставляем только последнюю по времени
+# Если последних операций тоже несколько, то оставляем в таком порядке: сначала depart - потом ready - потом arrive
+
+def get_oper_code(x):
+    if x == 'depart':
+        return 2
+    elif x == 'ready':
+        return 1
+    else:
+        return 0
+
+entities_df['train_oper']['oper_code'] = entities_df['train_oper'].oper.apply(get_oper_code)
+entities_df['train_oper'].sort_values(['train', 'oper_time', 'oper_code'])
+entities_df['train_oper'] = entities_df['train_oper'].sort_values(['train', 'oper_time', 'oper_code'])                                                     .drop_duplicates(subset=['train'], keep='last')                                                     .drop('oper_code', axis=1)
+
+
+# In[42]:
 
 if 'ind434' not in entities_df['train_info'].columns:
     entities_df['train_info'] = entities_df['train_info'].set_index('train')                                .join(entities_df['train_index'].set_index('train')).reset_index()
@@ -791,9 +812,9 @@ series['ser_type'] = series.ser_name.apply(lambda x: 'Электровоз' if a
 series.to_csv(FOLDER + 'loco_series.csv', index=False, encoding='utf-8')
 
 
-# In[78]:
+# In[194]:
 
 t = time.time() - start_time
-print('Total time:', np.round(t, 2), 'sec')
-print('Last run:', time.ctime())
+print('Общее время выполнения: %.2f сек.' % t)
+print('Время запуска:', time.ctime())
 
